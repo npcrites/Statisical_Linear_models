@@ -1,0 +1,112 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+title: "Lab4"
+author: "Nick Crites and Elliott Abel"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+potato <- read.table('potato.txt', header = T)
+potato
+```
+
+Let's plot the data in a meaningful way. We will first use `plot` to gain a basic overview of the data:
+
+```{r}
+plot(potato)
+```
+
+Based on the above plot, we see high levels of correlation between each of the three variables against each other. Let's use `weight` as our response and `length` and `breadth` as our responses.  
+
+Now, let's see our regression summary and plot the residuals vs. fitted, residuals vs. leverage, and a qq plot in order to determine trends in the variance of our residuals, the strength of the outliers, and the qq plot to understand whether our sample comes from normally distributed data.
+
+```{r}
+lmod <- lm(weight ~ length + breadth, potato)
+summary(lmod)
+plot(lmod)
+```
+
+We see above that we don't have a constant variance as the residuals between the fitted values at high and low fitted values were high. In the mid range of fitted values (40 to 80), our residual values were too low. The qq plot, however, looks quite normal. However, we will perform a Shapiro-Wilks test to see if we should reject the null hypothesis: that our data was sampled from a normal distribution. Lastly, we will ignore residuals vs. leverage for now; we will likely examine this later.
+
+Testing for normality:
+
+```{r}
+shapiro.test(residuals(lmod))
+```
+
+Based on this high p-value, greater than (0.05), we fail to reject the null hypothesis. Our data was sampled from a normal distribution. This seems like it could be a candidate for a linear model, but perhaps using a certain transformation - like a log transformation; let's check that now to see if it improves our model fit. Although this is outside the scope of this inquiry, if a transformation does not improve the fit, one could try to weight some of the outliers to try to improve our model fit because of the residual divergence from zero when
+
+Log fit:
+
+```{r}
+lmodLog <- lm(log(weight) ~ length + breadth, potato)
+summary(lmodLog)
+plot(lmodLog)
+
+shapiro.test(residuals(lmodLog))
+```
+
+Based on the log transformation, our model fit is very slightly improved, but not enough to definitively favor this model. In this case, we also fail to reject the null hypothesis - that the data was sampled from a normal distribution - because our shaprio-wilk value is greater than 0.05.
+
+Next we will use the ksmooth function to look at the weighted average of a certain sample window of our dataset. First, we will need to look at a scatterplot to understand the bandwidth of our 'window'.
+
+
+```{r}
+plot(potato$weight, potato$length, xlab = "weight", ylab = 'length', main = 'scatterplot: weight vs length')
+```
+
+Let's play around with a few different bandwidths:
+
+```{r}
+plot(potato$length, potato$weight)
+lines(ksmooth(potato$length, potato$weight, 'normal', bandwidth=10), lty =2,  lwd = 2, col = 'orange')
+mm <- loess(potato$weight ~ potato$length, span = .5, degree = 1)
+lines(sort(potato$length), mm$fit[sort.list(potato$length)], col = 'blue')
+mm <- lm(weight~length, data = potato)
+lines(potato$length, mm$fit, col = 'red')
+```
+
+When playing with a few values, it seems that the span and bandwidth impact the fit of the (orange) and (blue and red) lines respectively. As we lower the span value, the blue and red lines improve their fit to the data. As we increase the bandwidth, our orange line decreases its fit to the data. A span value of 0.5 and and a bandwidth value of 10 seems to be a happy medium between overfitting and underfitting our data. This makes us more confident in using a linear model,  but just because I chose a span and bandwidth, the model is not overfitted. If I would have decreased the bandwidth or lowered the span, my lines would appear much more curvy and less apt for a linear model. In short, my confidence is relative to my span and bandwidth choices.
+Let's take a look at leverage in our model:
+
+```{r}
+lm.influence(lmod)
+par(mfrow=c(2,2))
+plot(lmod)
+
+
+hatvalues(lmod) > 2 * mean(hatvalues(lmod)) #explicitly checking for high leverage points
+
+rstandard(lmod)[abs(rstandard(lmod)) > 2] #explicitly checking for outliers
+
+cooks.distance(lmod)[1] > 4 / length(cooks.distance(lmod)) #explicitly checking the influence of point no.1
+cooks.distance(lmod)[6] > 4 / length(cooks.distance(lmod)) #explicitly checking the influence of point no.6
+
+```
+
+The leverage function provides `$hat` values, which are the approximate values of leverage that each observation has. We can see that the first observation has a high leverage. As for outliers, we see that only point no. 6 could be considered an outlier. Checking the Cook's distance of these two points (1 and 6), we see that none of the values are influential. The `$coefficient` values show was the coefficients would be if the observations were removed. We see that the coefficients did not change much without the 1st observation, so it is not causing a problem to out model. The residuals vs leverage plot further confirms the conclusion that leverage is not dramatically affecting our model as all values are within a 0.5 Cook's distances and no one point is significantly moving the fit line.
+
+```{r}
+confint(lmod,'length',level=0.95)
+confint(lmod, 'breadth', level=0.95)
+```
+
+Since there is a high degree of collinearity as shown above, you can drop one predictor from the model and be less sensitive to leverage points and have a lower standard error. Below I will remove `breadth` as a predictor because it has a wider confidence interval:
+
+```{r}
+mod1 <- lm(potato$weight ~ potato$length)
+summary(mod1)
+summary(lmod)
+anova(lmod)
+anova(mod1)
+```
+
+The Anova test shows that you have a little bit lower level of significance for the `length` predictor using only one predictor, however our standard error for the `length` predictor is lower indicating that our single-variable model has greater stability. Further, using only one predictor would cause your level of collinearity to decrease, so - though debatable - we chose to use the single predictor model to remove worries of collinearity and instability.
+
+In summary, we see that our linear model (`lmod`) with two predictors (`length` and `bredth`) and one response (`weight`), was in fact sampled from a normal distribution and has a non-constant variance. Between the three variables, we observed a high level of correlation; this rose suspicion of collinearity and instability in our model. Overall, however, because we observed high significance in our predictors, a high R^2 value, and because we failed to reject that the data was sampled from a normal distribution, we decided that this case would be apt for a linear model and was worthy of inquiry. It might be important to note that we tried to improve the variance of residuals by transforming the data, but the fit was only slightly increased.
+
+Once we began inquiry, we made sure to verify the coefficient and standard error values given in the regression summary and confirmed those values using manual calculation techniques. Finally, we began investigation of collinearity within the model, acting on our initial suspicion due to the high levels of correlation between all three variables. Checking for collinearity, added noise into an iterative calculation of coefficients and their standard errors. When plotting a 100-row matrix containing these results, we found that the standard errors and coefficient values in three models (one with one predictor, one with two individual predictors, and one with the sum of the two predictors) contained in our graphs indicated that there exists a collinear relationship between `length` and `bredth`. To combat this collinearity, we tried removing the predictor with a wider confidence interval, this would allow us to remove one collinear variable while still maximizing accuracy. Thus, we ended up removing `breadth`. Though our R^2 value decreased and significance of our single predictor `length` decreased, the standard error of `length` decreased in the single-predictor model and our model is not at risk of instability or collinearity. Although one could have kept the collinear predictors together, we opted to remove `breadth` due to the model stability. Going forward, to try to improve model fit, one could try weighting outliers, but this technique might not end up being effective as we only have one confirmed outlier in this model and very few influential / leverage points.

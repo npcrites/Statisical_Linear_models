@@ -1,0 +1,35 @@
+---
+title: "Lab2"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+# 1
+
+```{r}
+linear.regression <- function(x,y) {
+  lm1 <- lm(y ~ x)
+  lm1$coefficients
+  lm1$fitted.values
+  lm1$residuals
+  rss <- deviance(lm1)
+  my_list <- list(lm1,  lm1$coefficients, lm1$fitted.values, lm1$residuals, rss)
+  
+  plot(x,y)
+  points(x, lm1$fitted.values, col = 'red', lwd = 3)
+  abline(lm1)
+  return(my_list)
+}
+```
+
+# 2
+
+```{r}
+library(MASS)
+data('phones')
+linear.regression(phones$year, phones$calls)
+```
+

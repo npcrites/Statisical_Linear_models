@@ -1,0 +1,86 @@
+---
+title: "Lab3"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+# 1
+
+```{r}
+calif = read.table("http://www.stat.cmu.edu/~cshalizi/uADA/12/hw/01/cadata.dat", header=TRUE)
+dim(calif)
+summary(calif) 
+```
+
+
+```{r}
+library(scatterplot3d)
+plot(calif$Longitude,calif$Latitude,pch=21, col=terrain.colors(11)[1+floor(calif$MedianHouseValue/50e3)],
+bg=terrain.colors(11)[1+floor(calif$MedianHouseValue/50e3)],
+xlab="Longitude",ylab="Latitude",main="Median House Prices")
+legend(x="topright",legend=(50*(1:11)),fill=terrain.colors(11))
+```
+```{r}
+plot(calif$Longitude,calif$Latitude,pch=21,
+col=terrain.colors(11)[1+floor(calif$MedianHouseValue/50e3)],
+bg=terrain.colors(11)[1+floor(calif$MedianHouseValue/50e3)],
+cex=sqrt(calif$Population/median(calif$Population)),
+xlab="Longitude",ylab="Latitude",main="Median House Prices",
+sub="Circle area proportional to population")
+legend(x="topright",legend=(50*(1:11)),fill=terrain.colors(11))
+```
+
+```{r}
+scatterplot3d(calif$Longitude,calif$Latitude,calif$MedianHouseValue,
+pch=20,scale.y=0.4,type="p",cex.symbol=0.1,
+xlab="Longitude",ylab="Latitude",zlab="Median House Value")
+```
+
+```{r}
+scatterplot3d(calif$Longitude,calif$Latitude,calif$MedianHouseValue,
+pch=20,scale.y=0.4,type="h",cex.symbol=0.01,
+xlab="Longitude",ylab="Latitude",zlab="Median House Value")
+```
+
+# 2
+
+```{r}
+fit = lm(MedianHouseValue ~ ., data=calif)
+signif(coefficients(fit),3)
+signif(summary(fit)$r.squared,digits=3)
+```
+
+The coefficents estimated is a description of their overall impact on `MedianHouseValue`0 our response in this model  
+
+# 3
+
+Based on the above coefficents, the absolute value of the largest coefficents have the greatest effect on the model. Employing this logic, the intercept most significantly effects the model output; outside of this, `Latitude` `Longitude` and `MedianIncome` have the greatest impact on model. They are all the same significance level, so we can directly compare the values.
+
+# 4
+
+```{r}
+plot(fit)
+```
+
+The residuals in this case do not appear to have a normal distribution. In this case we would reject the null hypothesis - that our data comes from a normal distribution. We can verivfy this claim via the Shapiro-Wilkes test in number 5:
+
+# 5
+
+```{r}
+shapiro.test(sample(resid(fit), 5000))
+```
+
+Based on the above shapiro wilkes test, we reject the null hypothesis because our p value is less than 0.05.
+
+# 6
+
+```{r}
+fit0 = lm(log(MedianHouseValue) ~ (MedianIncome) + MedianHouseAge + TotalRooms + TotalBedrooms + Population + Households + Latitude + Longitude, calif)
+signif(coefficients(fit0,3))
+signif(summary(fit0)$r.squared,digits=3)
+```
+
+The scaled model seems to be a better fit as the R^2 value is higher and all the predictors are still significant. The coefficents seem to be smaller in the scaled model, so this model also is more intuitive and interpretable. 

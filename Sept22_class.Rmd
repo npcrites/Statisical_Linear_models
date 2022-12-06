@@ -1,0 +1,224 @@
+---
+title: "Class_Sept22"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(faraway)
+data(fat)
+head(fat)
+```
+```{r}
+lmodel <- lm(brozek ~ age + weight + height + neck + chest + abdom + hip +  thigh + ankle + biceps +  forearm + wrist, data = fat)
+summary(lmodel)
+```
+
+```{r}
+x = model.matrix(lmodel)
+x
+```
+#predict the mdeian male body fat
+
+```{r}
+x0 = apply(x,2,median)
+y0 =  sum(x0*coef(lmodel))
+y0
+```
+
+```{r}
+predict(lmodel, new=data.frame(t(x0)))
+predict(lmodel,  new=data.frame(t(x0)), interval="confidence")
+predict(lmodel, new=data.frame(t(x0)), interval="prediction")
+```
+
+```{r}
+x1  = apply(x,2,function(x) quantile(x, 0.95))
+x1
+predict(lmodel, new=data.frame(t(x1)))
+predict(lmodel,  new=data.frame(t(x1)), interval="confidence")
+predict(lmodel, new=data.frame(t(x1)), interval="prediction")
+```
+
+
+Next problem
+
+
+```{r}
+data('airpass')
+fuck <- lm(log(pass) ~ year, airpass)
+plot(pass ~ year, data = airpass, type = "l", ylab = "Log Passenegers")
+lines(exp(predict(fuck)) ~ year, airpass)
+```
+
+Now we are going to create our lagged data:
+
+```{r}
+lagdf = embed(log(airpass$pass), 14)
+colnames(lagdf) = c("y",paste0("lag", 1:13))
+lagdf = data.frame(lagdf)
+lagdf
+```
+
+Create time series model:
+  
+```{r}
+armod = lm(y ~ lag1 + lag12 + lag13 , data.frame(lagdf))
+summary(armod)
+```
+
+Now lets overlay instead of straight line regression:
+
+```{r}
+plot(pass~year, airpass, type = "l")
+lines(airpass$year[14:144], exp(predict(armod)), lty = 2, col= 2)
+#The last value  in our dataset
+lagdf[nrow(lagdf),]
+#predict our next value
+predict(armod, data.frame(lag1=6.0684, lag12=6.033086, lag13 = 5.891644), interval = "prediction")
+```
+
+```{r}
+sim_1 = function(sample_size = 500){
+  x = runif(n=sample_size)*5
+  y =  3 + 5*x +  rnorm(n=sample_size, mean=0, sd=1)
+  data.frame(x,y)
+}
+
+set.seed(42)
+sim_data_1 = sim_1()
+head(sim_data_1)
+```
+}
+
+```{r}
+sim_2 = function(sample_size = 500){
+  x = runif(n=sample_size)*5
+  y =  3 + 5*x +  rnorm(n=sample_size, mean=0, sd=x)
+  data.frame(x,y)
+}
+```
+
+```{r}
+sim_3 = function(sample_size = 500){
+  x = runif(n=sample_size)*5
+  y =  3 + 5*x^2 +  rnorm(n=sample_size, mean=0, sd=5)
+  data.frame(x,y)
+}
+```
+
+```{r}
+set.seed(42)
+sim_data_1 = sim_1()
+sim_data_2 = sim_2()
+sim_data_3 = sim_3()
+plot(y~x, data = sim_1(), col = "grey", pch =20, main = "DataFrame1")
+fit_1 = lm(y~x,data = sim_data_1)
+abline(fit_1, col = "darkorange", lwd=3) 
+#satisfies linearity and constant variance
+plot(fitted(fit_1), resid(fit_1), col = "grey", pch = 20, xlab = "fitted", ylab = "residuals", main = "Data From Model 2")
+abline(h=0, col="darkorange")
+```
+```{r}
+plot(y~x, data = sim_2(), col = "grey", pch =20, main = "DataFrame2")
+fit_2 = lm(y~x,data = sim_data_2)
+abline(fit_2, col = "red", lwd=3)
+#satisfies linearity
+plot(fitted(fit_2), resid(fit_2), col = "grey", pch = 20, xlab = "fitted", ylab = "residuals", main = "Data From Model 2")
+abline(h=0, col="red")
+```
+
+```{r}
+plot(y~x, data = sim_3(), col = "grey", pch =20, main = "DataFrame3")
+fit_3 = lm(y~x,data = sim_data_3)
+abline(fit_3, col = "green", lwd=3)
+#satisfies linearity
+plot(fitted(fit_3), resid(fit_3), col = "grey", pch = 20, xlab = "fitted", ylab = "residuals", main = "Data From Model 2")
+abline(h=0, col="green")
+```
+
+```{r}
+par(mfrow = c(1,3))
+hist(resid(fit_1),
+     xlab = "residuals",
+     ylab = "Histogram of Residuals, fit_1",
+     col  = "darkorange",
+     border = "dodgerblue",
+     breaks = 20)
+```
+
+```{r}
+par(mfrow = c(1,3))
+hist(resid(fit_2),
+     xlab = "residuals",
+     ylab = "Histogram of Residuals, fit_2",
+     col  = "darkorange",
+     border = "dodgerblue",
+     breaks = 20)
+```
+
+```{r}
+par(mfrow = c(1,3))
+hist(resid(fit_3),
+     xlab = "residuals",
+     ylab = "Histogram of Residuals, fit_3",
+     col  = "darkorange",
+     border = "dodgerblue",
+     breaks = 20)
+```
+
+Lets use QQ plot and Shapiro-Wilkes test
+
+```{r}
+qqnorm(resid(fit_1), main = "Normal Q-Q plot, Fit_1", col = "darkgrey")
+qqline(resid(fit_1), col = "dodgerblue", lwd=2)
+```
+Points should come from a straiight line, this would suggest they don't come from a normal distribution
+
+```{r}
+qqnorm(rnorm(10))
+qqline(rnorm(10))
+qqnorm(rnorm(25))
+qqline(rnorm(25))
+qqnorm(rnorm(100))
+qqline(rnorm(100))
+qqnorm(rnorm(1000))
+qqline(rnorm(1000))
+qqnorm(rnorm(100000))
+qqline(rnorm(100000))
+```
+```{r}
+qqnorm(rexp(10))
+qqline(rexp(10))
+qqnorm(rexp(100))
+qqline(rexp(100))
+qqnorm(rexp(1000))
+qqline(rexp(1000))
+par(mfrow = c(3,1))
+```
+
+QQ plots for model 2 and 3
+
+```{r}
+qqnorm(resid(fit_2), main = "Normal QQ plot, Fit_2", col = "darkgrey")
+qqline(resid(fit_2), col = "dodgerblue", lwd = 2)
+
+qqnorm(resid(fit_3), main = "Normal QQ plot, Fit_3", col = "darkgrey")
+qqline(resid(fit_3), col = "dodgerblue", lwd = 2)
+```
+
+Shapiro Wilks Test!
+
+```{r}
+shapiro.test(resid(fit_1))
+```
+
+```{r}
+shapiro.test(resid(fit_2))
+```
+```{r}
+shapiro.test(resid(fit_3))
+```
+Bigger p - value means higher likelihood  of normality
+

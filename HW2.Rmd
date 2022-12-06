@@ -1,0 +1,243 @@
+---
+title: "HW2"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+## 2 
+
+```{r}
+library(faraway)
+data("uswages")
+summary(uswages)
+```
+
+Now, let's fit a linear model where weekly wages are the response and the years of education and experience as predictors:
+
+```{r}
+lm1 <- lm(wage ~ educ + exper, uswages)
+summary(lm1)
+```
+```{r}
+plot(lm1)
+```
+
+Based on this model fit, the coefficent for education level has a value of ~51. According to this fit, education level has about 5x the impact of work experience on wage. However, our R^2 values are quite low so these variables don't effectively predict wage. 
+
+Now let's look at the same model, but instead with logged weekly wages:
+
+```{r}
+lm2 <- lm(log(wage) ~ educ + exper, uswages)
+summary(lm2)
+```
+
+```{r}
+plot(lm2)
+```
+
+Based on this fit, the coefficient for education drastically decreased. This is largely because the log rule was applied as the values for wage range multiple orders of magnitude. For this reason and because the original fit has an intercept of -242 (a negative wage is impossible), the second model is much more natural and ought to be used.
+
+## 3 
+
+Generating the artificial data:
+
+```{r}
+x <- 1:20
+y <- x + rnorm(20)
+lm3 <- lm(y ~ x + I(x^2))
+beta1 <- coef(lm3)
+```
+
+The above model predicts that y has a beta coefficent value of 0.90716. Now, we can also find the beta value by hand using the X transposed matrix:
+
+```{r}
+X <- cbind(1, x, x^2)
+betaSolved <- solve(t(X) %*% X) %*% t(X) %*% y 
+print(cbind(beta1,betaSolved))
+```
+
+For a first order polynomial, the direct calculation method is still effective. Let's try second degree:
+
+```{r}
+x <- 1:20
+y <- x + rnorm(20)
+lm3 <- lm(y ~ x + I(x^2)+ I(x^3))
+beta1 <- coef(lm3)
+```
+```{r}
+X <- cbind(1, x, x^2, x^3)
+betaSolved <- solve(t(X) %*% X) %*% t(X) %*% y 
+print(cbind(beta1,betaSolved))
+```
+
+Looks like the by-hand calcualtion still works. Let's play around and see where the by-hand method fails
+
+```{r}
+x <- 1:20
+y <- x + rnorm(20)
+lm3 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4))
+beta1 <- coef(lm3)
+```
+
+```{r}
+X <- cbind(1, x, x^2, x^3,x^4)
+betaSolved <- solve(t(X) %*% X) %*% t(X) %*% y 
+print(cbind(beta1,betaSolved))
+```
+
+Looks like the values match at beta hat to the4th degree. Let's try the 5th:
+
+```{r}
+x <- 1:20
+y <- x + rnorm(20)
+lm3 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4)+ I(x^5))
+beta1 <- coef(lm3)
+```
+
+```{r}
+X <- cbind(1, x, x^2, x^3,x^4,x^5)
+betaSolved <- solve(t(X) %*% X) %*% t(X) %*% y 
+print(cbind(beta1,betaSolved))
+```
+
+```{r}
+x <- 1:20
+y <- x + rnorm(20)
+lm3 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5))
+beta1 <- coef(lm3)
+```
+
+```{r}
+X <- cbind(1, x, x^2, x^3,x^4, x^5)
+betaSolved <- solve(t(X) %*% X) %*% t(X) %*% y 
+print(cbind(beta1,betaSolved))
+```
+
+```{r}
+x <- 1:20
+y <- x + rnorm(20)
+lm3 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5) + I(x^6))
+beta1 <- coef(lm3)
+```
+
+```{r, error = TRUE}
+X <- cbind(1, x, x^2, x^3,x^4, x^5, x^6)
+betaSolved <- solve(t(X) %*% X) %*% t(X) %*% y 
+print(cbind(beta1,betaSolved))
+```
+
+Here, we see that the by-hand method fails at x^6. We are finally done!
+
+
+## 6
+
+```{r}
+data(cheddar)
+summary(cheddar)
+```
+
+#### 6A
+
+```{r}
+lm4 <- lm(taste ~ Acetic + H2S + Lactic, cheddar)
+summary(lm4)
+```
+
+According to the above model, the coefficents for Acetic, H2S, and Lactic are 0.3, 3.9, and 19.6705, respectively.
+
+#### 3B
+
+```{r}
+fitVal <- cheddar$taste - lm4$residuals 
+print((cor(cheddar$taste, fitVal)^2))
+```
+
+This value referrs to the residual standard error.
+
+#### 3C
+
+```{r}
+lm5 <- lm(taste ~ 0 + Acetic + H2S + Lactic, cheddar)
+summary(lm5)
+```
+
+When removing the intercept, the R^2 value increased from 0.61 to 0.87. We can use an ANOVA table to evaluate the goodness of the fit:
+
+```{r}
+anova(lm4, lm5)
+```
+
+At alpha = 0.05 significance, one fails to reject the null - that the restricted model is better because the P-value is too large.
+
+#### 3D
+
+Finding the coefficents using QR decomposition:
+
+```{r}
+X1 <- model.matrix(~ Acetic + H2S + Lactic, cheddar)
+Y1  <- cheddar$taste
+qrx <- qr(X1) #acetic
+dim(qr.Q(qrx))
+```
+```{r}
+(f <- t(qr.Q(qrx)) %*% Y1)
+```
+
+```{r}
+backsolve(qr.R(qrx), f)
+```
+
+Checks out!
+
+## 7
+
+#### 7A
+
+```{r}
+data("wafer")
+summary(wafer)
+```
+
+```{r}
+lm6 <- lm(resist ~ x1 + x2 + x3 + x4, wafer)
+summary(lm6)
+```
+
+Let's extract the model matrix:
+
+```{r}
+X2 <- model.matrix(~x1 + x2 + x3 + x4, wafer)
+X2
+```
+
+It appears that 'low' or - has been encoded as a zero and a + has been encoded as a 1.
+
+#### 7B
+
+Computing the correlation in the X matrix:
+
+```{r}
+cor(X2) 
+```
+
+We have NA values due to covariance between the intercept and coefficients. The values are all constant (1). We are trying to correlate a scalar (intercept) with vectors (beta values), this is why we see NA values.
+
+#### 7C
+
+The difference in resistance for low and high level in X1 can be computed by simply finding the resist value for x1 == 0 and x1 == 1, respectively. Thus, the expected difference in resistance is `25.76`. 
+
+#### 7D
+
+```{r}
+lm7 <- lm(resist ~ x1 + x2 + x3, wafer)
+summary(lm7)
+```
+
+According to the above model, the regression coefficients remained constant when x4 was removed, but the intercept value increased. The standard error also slightly increased, and a degree of freedom was added. Thus, some complexity was removed from the model, increasing the RSE; however, because the coefficients remained constant, x4 is shown to have little impact on the model's ability to predict resistance, as indicated by the near constant R^2 value.
+
+#### 7E
+
+The x4 coefficient is removed from the model, so the  5th column and the 5th row of the matrix are therefore removed. There is no significant change to X. The intercept is  adjusted for this removal but the diagonal entries still have a value of 1 throughout the correlation matrix of X.

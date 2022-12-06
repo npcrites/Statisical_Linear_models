@@ -1,0 +1,381 @@
+---
+title: "HW1"
+author: "Nick Crites"
+date: "2022-09-06"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+# Chapter 1  
+## #1
+``` {r teengamb}
+library(faraway)
+data("teengamb")
+summary("teengamb")
+```
+```{r}
+head(teengamb)
+```
+```{r}
+tail(teengamb)
+```
+Based on these visualizations, one gender is encoded as 0 and the other as 1, so let's encode sex data as string genders rather than 0 and 1 
+```{r}
+levels(teengamb$sex) <- c("male","female")
+summary(teengamb)
+```
+
+Trying out a few visual representations of the data to look for outliers:
+``` {r echo = TRUE}
+plot(sort(teengamb$gamble), ylab = "Sorted Expenditure")
+plot(teengamb$gamble ~ teengamb$verbal) #gamble v. verbal
+plot(teengamb$gamble ~ teengamb$income) #gamble v. income
+plot(teengamb$gamble ~ teengamb$status) #gamble v. status
+```
+
+Now let's check out the density plot for our independent variable:
+``` {r echo = TRUE} 
+plot(density(teengamb$gamble, na.rm = TRUE), main = "")
+```
+
+And a histogram for the independent variable:
+``` {r echo = TRUE}
+hist(teengamb$gamble, xlab = "Gambling expendetures", main = '')
+```
+
+Finally let's look at the numerical summaries of the data
+``` {r} 
+lmod <- lm(gamble ~ verbal, teengamb) #gamble v verbal
+coef(lmod)
+```
+``` {r}
+lmod2 <- lm(gamble ~ status, teengamb) #gamble v status
+coef(lmod2)
+```
+``` {r}
+lmod3 <- lm(gamble ~ income, teengamb) # gamble v income
+coef(lmod3)
+```
+
+The coeffecents examined in the relationships between income and income are far from the line of best fit; regression probably shouldn't be used to examine the relationships between the independent and dependent variables.
+ 
+## #3
+```{r}
+data("prostate")
+head(prostate)
+```
+```{r}
+tail(prostate)
+```
+```{r}
+summary(prostate)
+```
+Note that svi is encoded as 0 and 1.
+Next we will render an initial histogram of indep. variable (lcavol):
+```{r}
+hist(prostate$lcavol, xlab = "Cancer Volume", main = '')
+```
+
+Density plot:
+```{r}
+plot(density(prostate$lcavol, na.rm = TRUE, main = ''))
+```
+
+Sorted plot:
+```{r}
+plot(sort(prostate$lcavol), ylab = "sorted cancer volume")
+```
+
+Comparing each of the dependent varibles with lcavol numerically and graphically:
+```{r}
+plot(lcavol ~ lweight, prostate) #lcavol v lweight
+abline(lm(lcavol ~ lweight, prostate))
+```
+```{r}
+lmod4 <- lm(lcavol ~ lweight, prostate)
+coef(lmod4)
+```
+``` {r}
+plot(lcavol ~ age, prostate) #lcavol v age
+abline(lm(lcavol ~ age, prostate))
+```
+```{r}
+lmod5 <- lm(lcavol ~ age, prostate)
+coef(lmod5)
+```
+```{r}
+plot(lcavol ~ lcp, prostate) #lcavol vs lcp 
+abline(lm(lcavol ~ lcp, prostate))
+```
+```{r}
+lmod6 <- lm(lcavol ~ lcp, prostate)
+coef(lmod6)
+```
+```{r}
+plot(lcavol ~ lbph, prostate) #lcavol v lbph
+abline(lm(lcavol ~ lbph, prostate))
+```
+```{r}
+lmod7 <- lm(lcavol~lbph, prostate)
+coef(lmod7)
+```
+```{r}
+plot(lcavol ~ lpsa, prostate) #lcavol v lpsa
+abline(lm(lcavol ~ lpsa, prostate))
+```
+```{r}
+lmod8 <- lm(lcavol ~ lpsa, prostate)
+coef(lmod8)
+```
+Based on this representation, we see that lpsa and lcp are most correlated with the line of best fit due to the R^2 test and the variance of the residuals
+
+## #4 
+```{r}
+data("sat")
+head(sat)
+summary(sat)
+```
+Initial histogram of expend distribution:
+```{r}
+hist(sat$expend, xlab = "expends")
+```
+
+Density plot of expend:
+```{r}
+plot(density(sat$expend), xlab = "expends")
+```
+```{r}
+#sorted plot
+plot(sort(sat$expend), ylab = 'sorted expends')
+```
+
+Now looking at the dependent variables numerically + graphically:
+```{r}
+lmod9 <- lm(expend ~ ratio, sat) #expend v ratio
+coef(lmod9)
+```
+```{r}
+plot(expend~ratio, sat)
+abline(lm(expend~ratio, sat))
+```
+```{r}
+lmod10 <- lm(expend~salary,sat) #expend v salary
+coef(lmod10)
+```
+```{r}
+plot(expend~salary,sat)
+abline(lm(expend~salary,sat))
+```
+
+Via the R^2 test, this looks like a pretty good candidate for LR on face value
+
+```{r}
+lmod11 <- lm(expend~takers,sat) #expend v takers
+coef(lmod11)
+```
+```{r}
+plot(expend~takers,sat)
+abline(lm(expend~takers,sat))
+```
+```{r}
+lmod12 <- lm(expend~verbal,sat) #expend v verbal
+coef(lmod12)
+```
+```{r}
+plot(expend~verbal,sat)
+abline(lm(expend~verbal,sat))
+```
+```{r}
+lmod13 <- lm(expend~math,sat) #expend v verbal
+coef(lmod13)
+```
+```{r}
+plot(expend~math,sat)
+abline(lm(expend~math,sat))
+```
+```{r}
+lmod14 <- lm(expend~total,sat)
+coef(lmod14)
+```
+```{r}
+plot(expend~total,sat)
+abline(lm(expend~total,sat))
+```
+
+# CH 2
+
+## #1 
+
+```{r}
+data("teengamb")
+summary(teengamb)
+```
+```{r}
+teengamb$sex <- factor(teengamb$sex)
+lmGamb <- lm(gamble ~ sex+status+income+verbal,teengamb)
+summary(lmGamb)
+```
+Percentage of variation in the response explained by the above predictors: R^2 = 0.5267
+
+### Which observation has the largest residual? 
+The observation with the largest residual is case 24 with a residual value of `max(lmGamb$residuals)`
+
+### Mean and median of the residuals
+```{r}
+mean(lmGamb$residuals)
+```
+```{r}
+median(lmGamb$residuals)
+```
+The mean of the residuals is`mean(lmGamb$residuals)`. The median of the residuals has a value of `median(lmGamb$residuals)`
+
+### Correlation of residuals with the fitted values
+```{r}
+fitVal <- teengamb$gamble - lmGamb$residuals
+cor(lmGamb$residuals, fitVal)
+```
+### Correlaling residual values with the income
+```{r}
+cor(lmGamb$residuals, teengamb$income)
+```
+### How much more likely is a male to spend money gambling than a female?
+Based on the correlation coefficent for sex1, which has a value of -22.11833, on average men spend $22.11 more on gambling than females. However, this problem is assuming we hold all other variables constant, so we should really be looking at:
+
+```{r}
+lm(gamble~sex, data = teengamb)
+```
+### Based on this observation, on average males spend $25.91 relative to females on gambling
+
+## #4
+```{r}
+data("prostate")
+summary(prostate)
+```
+```{r}
+lmProstate<- (lm(lpsa ~ lcavol,prostate))
+summary(lmProstate)
+```
+#### Standard residual error: .7875
+#### Non-adjusted R-squared: .5394
+
+Now we can add  in independent variables and record the RSE and R^2 values:
+
+```{r}
+r2error <- c()
+rse <- c()
+
+lmPros <- (lm(lpsa ~ lcavol + lweight, prostate))
+sumPros <- summary(lmPros)
+sumPros
+```
+When adding weight, the R^2 value is .58  and the RSE is .75
+
+```{r}
+r2error <- c(r2error,sumPros$r.squared)
+rse <- c(rse, sumPros$sigma)
+```
+
+Now adding age:
+
+```{r}
+lmPros <- (lm(lpsa ~ lcavol + lweight + age, prostate))
+sumPros <- summary(lmPros)
+sumPros
+```
+
+When adding age and lweight, the R^2 value is .58 and the RSE value is .75
+
+```{r}
+r2error <- c(r2error,sumPros$r.squared)
+rse <- c(rse, sumPros$sigma)
+```
+
+Now we can add svi:
+
+```{r}
+lmPros <- (lm(lpsa ~ lcavol + lweight + age + svi, prostate))
+sumPros <- summary(lmPros)
+sumPros
+```
+
+We see that when svi, weight, and age are added R^2 = .62 and RSE is .71
+
+```{r}
+r2error <- c(r2error,sumPros$r.squared)
+rse <- c(rse, sumPros$sigma)
+```
+
+Now let's add lbph:
+
+```{r}
+lmPros <- (lm(lpsa ~ lcavol + lweight + age + svi + lbph, prostate))
+sumPros <- summary(lmPros)
+sumPros
+```
+
+Here we see when lweight, age, svi, and lbph are added to the model, R^2 is .6441 and RSE is .70
+
+```{r}
+r2error <- c(r2error,sumPros$r.squared)
+rse <- c(rse, sumPros$sigma)
+```
+
+Now let's add lcp:
+
+```{r}
+lmPros <- (lm(lpsa ~ lcavol + lweight + age + svi + lbph + lcp, prostate))
+sumPros <- summary(lmPros)
+sumPros
+```
+
+We see that whem lweight, age, svi, lbph, and lcp are added, R^2 is .6451 and RSE is .7102
+
+```{r}
+r2error <- c(r2error,sumPros$r.squared)
+rse <- c(rse, sumPros$sigma)
+```
+
+Now let's add pgg45:
+
+```{r}
+lmPros <- (lm(lpsa ~ lcavol + lweight + age + svi + lbph + lcp + pgg45, prostate))
+sumPros <- summary(lmPros)
+sumPros
+```
+
+We see that whem lweight, age, svi, lbph, lcp, and pgg45 are added, R^2 is .65 and RSE is .7048.
+
+```{r}
+r2error <- c(r2error,sumPros$r.squared)
+rse <- c(rse, sumPros$sigma)
+```
+
+Finally, we can add gleason:
+
+```{r}
+lmPros <- (lm(lpsa ~ lcavol + lweight + age + svi + lbph + lcp + pgg45 + gleason, prostate))
+sumPros <- summary(lmPros)
+sumPros
+```
+
+We can see now  that once lweight, age, svi, lbph, lcp, ppg45, and gleason are added, R^2 is ~.65 and RSE is about .70
+
+
+```{r}
+r2error <- c(r2error,sumPros$r.squared)
+rse <- c(rse, sumPros$sigma)
+```
+
+Finally, we can graphically examine the trends in R^2 values and RSE values:
+
+```{r}
+plot(r2error, main = "R^2 trends" , ylab="R-squared")
+```
+
+Lastly, we can plot the trend in RSE:
+
+```{r}
+plot(rse, main="RSE trend", ylab="RSE")
+```

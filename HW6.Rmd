@@ -1,0 +1,244 @@
+---
+title: "HW6"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+3, 4, 6, 8
+
+# 3
+
+```{r}
+library(faraway)
+data('divusa')
+lm1 <- lm(divorce ~ unemployed + femlab + marriage + birth + military, divusa)
+summary(lm1)
+```
+
+Computing / interpreting conditional numbers:
+
+```{r}
+x <- model.matrix(lm1) [, -1]
+e <- eigen(t(x) %*% x)
+e$val
+sqrt(e$val[1]/e$val)
+```
+
+As we see from the eigenvalues above, none of the condition number values are considered large. The predictors appear to be relatively orthogonal and have little collinearity.
+
+# 3B 
+
+```{r}
+vif(x)
+```
+
+There does not appear to be much variance inflation in our model based on the relatively low vif values.
+
+# 3C
+
+Removing the insignificant predictors (`military` and `unemployed`):
+
+```{r}
+lmod_1 <- lm(divorce ~ femlab + marriage + birth , divusa)
+summary(lmod_1)
+```
+
+
+```{r}
+xx <- model.matrix(lmod_1) [, -1]
+e <- eigen(t(xx) %*% xx)
+e$val
+
+sqrt(e$val[1]/e$val)
+
+vif(xx)
+```
+
+Removal of these insignificant variables does not change the VIF values or the conditional numbers. Therefore, we can confirm that these predictors were independent / orthogonal of the significant predictors.
+
+# 4A
+
+```{r}
+data('longley')
+lm2 <- lm(Employed ~  ., longley)
+summary(lm2)
+```
+
+Condition numbers:
+
+```{r}
+xy <- model.matrix(lm2) [, -1]
+e <- eigen(t(xy) %*% xy)
+e$val
+sqrt(e$val[1]/e$val)
+```
+
+Based on the above conditional numbers, we can see that severalof our condition numbers  are too large as their values are greater than 30. This indicates that we have collinearity for more than just one linear combination.
+
+# 4B
+
+```{r}
+vif(xy)
+```
+
+Our VIF values confirm our hypothesis that there is collinearity between more than just one linear combination. This can be seen in  `GNP`, `GNP.deflator`, `Year`  and `Populations` which have VIF values far greater than 40. 
+
+# 4C
+
+Removing the insignificant values, which happen to be `GNP`, `GNP.deflator`, and `Populations`:
+
+```{r}
+lmod_2 <- lm(Employed ~ Armed.Forces + Unemployed + Year, longley)
+
+xy1 <- model.matrix(lmod_2) [, -1]
+e <- eigen(t(xy1) %*% xy1)
+e$val
+sqrt(e$val[1]/e$val)
+
+vif(xy1)
+```
+
+By removing the insignificant predictors, we were able to remove collinearity from the data, and even decrease collinearity between the variables that were kept. Thus there could have been a latent relationship between the variables kept that was supplemented by the insignificant predictors.
+
+# 6A
+
+```{r}
+data("cheddar")
+lmched <-  lm(taste ~ ., cheddar)
+summary(lmched)
+```
+
+The predictor `lactic` is statistically significant at a .05 level. 
+
+# 6B
+
+```{r}
+lmched$coefficients[4] = 0
+summary(lmched)$coef[4,4]
+```
+
+The P-value when the beta for Lactic is set to zero is 1.0
+
+# 6C
+
+```{r}
+df <- cheddar
+df$Lactic <- df$Lactic + rnorm(nrow(df),mean = 0,sd = 0.01)
+lmched1 <- lm(taste ~ ., data=df)
+coef(summary(lmched1))["Lactic","Pr(>|t|)"]
+```
+
+# 6D
+
+```{r}
+simCount <- 5000
+pvals <- matrix(0, nrow = simCount, ncol = 1)
+for (i in 1:simCount)
+  { 
+  df <- cheddar
+  df$Lactic <- df$Lactic + rnorm(nrow(df),mean = 0,sd = 0.01)
+  lmched1 <- lm(taste ~ ., data=df)
+  pvals[i] <- coef(summary(lmched1))["Lactic","Pr(>|t|)"]
+} 
+mean(pvals)
+```
+
+By adding error to `Lactic` 1000 times, we see that the average p-value for the model slightly and thus is not much affected by the addition of noise.
+
+# 6E
+
+```{r}
+simCount1 <- 5000
+pvals1 <- matrix(0, nrow = simCount1, ncol = 1)
+for (i in 1:simCount1)
+  { 
+  df <- cheddar
+  df$Lactic <- df$Lactic + rnorm(nrow(df),mean = 0,sd = 0.1)
+  lmched1 <- lm(taste ~ ., data=df)
+  pvals1[i] <- coef(summary(lmched1))["Lactic","Pr(>|t|)"]
+} 
+mean(pvals1)
+```
+
+By adjusting the standard deviation of the noise added to `Lactic` we see that the average P value for the predictor is drastically effected.
+
+# 8A
+
+```{r}
+data("fat")
+lmodFat <- lm(brozek ~ age + weight + height + neck + chest + abdom + hip + thigh + knee + ankle + biceps + forearm + wrist, data=fat)
+
+xfat <- model.matrix(lmodFat) [, -1]
+e <- eigen(t(xfat) %*% xfat)
+sqrt(e$val[1]/e$val)
+```
+
+As we see above, we have several large conditional numbers indicating that our model contains collinear relationships between multiple predictors
+
+```{r}
+vif(xfat)
+```
+
+Our variance inflation factors confirm our suspicions of collinear relationships within our model due to many of the values being greater than 5 or 6. 
+
+# 8B
+
+```{r}
+fat_2 <- fat[-c(39,42),]
+lmodFat2 <- lm(brozek ~ age + weight + height + neck + chest + abdom + hip + thigh + knee + ankle + biceps + forearm + wrist, fat_2)
+summary(lmodFat2)
+```
+
+```{r}
+xfat2 <- model.matrix(lmodFat2) [, -1]
+e1 <- eigen(t(xfat2) %*% xfat2)
+sqrt(e1$val[1]/e1$val)
+vif(xfat2)
+```
+
+For each conditional number, our values have been slightly decreased. Thus, one can see that removing the two anomalous cases reduces the overall collinearity between predictors in our model. This is confirmed via our VIF values as all the 'large' values (greater than 5) decrease other than weight.
+
+# 8C
+
+```{r}
+lmodFat3 <- lm(brozek ~ age + weight + height, fat)
+summary(lmodFat3)
+
+xfat3 <- model.matrix(lmodFat3) [, -1]
+e3 <- eigen(t(xfat3) %*% xfat3)
+sqrt(e3$val[1]/e3$val)
+vif(xfat3)
+```
+
+Our overall R-squared value decreased, so our model is no as accurate. However, all three predictors are significant and our conditional numbers and VIF numbers indicate that our three predictors are orthogonal, so collinearity is not an issue. 
+
+# 8D
+
+```{r}
+x3Fat <- model.matrix(lmodFat3)
+median1 <- apply(x3Fat,2,median)
+median1
+pred_d <- predict(lmodFat3, data.frame(t(median1)), interval="prediction")
+pred_d
+```
+
+Above, we can see that the median values for age weight and height. As well as the 95% prediction interval for `brozek`.
+
+# 8E
+
+```{r}
+x0Fat1 <- data.frame(age=40,weight=200,height=73)
+predict(lmodFat3,new=x0Fat1, interval="prediction")
+```
+
+By setting the age, weight and height to fixed values, we can see that our confidence interval shifts 'up'. The fit, lwr, and upr ranges all increase in value, but the interval itself does not widen much.
+
+# 8F
+
+```{r}
+x0Fat2 <- data.frame(age=40,weight=130,height=73)
+predict(lmodFat3,new=x0Fat2, interval="prediction")
+```
+
+The prediction interval is wider for this example, and the `fat` value is a quite small number. Therefore, due to the low weight value and large width of the prediction interval, this could be a leverage point.

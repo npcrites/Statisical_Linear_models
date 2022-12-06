@@ -1,0 +1,324 @@
+---
+title: "Exam 1"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+# Section I : Introduction
+
+In this analysis, I will be exploring the automobile milage dataset `Cars93` from the MASS library. In exploring this data, I want to create the best possible model fit while still preseving stability. To test and ensure that I reach this goal, I will examine whether transformations are viable for this dataset and then find the best possible linear regression model for the data. At this point, I will revisit and test some assumption made about the data when it is fit with a linear regression - like constant residual variance. Next, I will run diagnostics to find outliers and certain points that have high influence over the model, and check to see if there exists collinearity within the model in order to ensure model stability. Finally, I will compare the results of the best linear regression model to some least squares alternatives - like Least Trimmed Squares. 
+
+# Section II: The Data
+
+An exploratory analysis of the `Cars93` dataset:
+
+```{r}
+require(car)
+library(MASS)
+data('Cars93')
+tail(Cars93)
+boxplot(Cars93)
+Cars93<-na.omit(Cars93) # data contains some missing values that cause errors in stepwise regression; eliminate them
+```
+
+Upon initial analysis of the data, the `cars` dataset has 27 variables. However, we only want to examine the variables that help us predict our response variable (Y) `100 / City MPG`. Let's examine the relationship between the numerical variablels to try to understand which variables ought to be included in a linear model as predictors:
+
+```{r}
+plot(100/MPG.city ~ MPG.highway, Cars93)
+plot(100/MPG.city ~ Max.Price, Cars93)
+plot(100/MPG.city ~ Horsepower, Cars93)
+plot(100/MPG.city ~ Rev.per.mile, Cars93)
+plot(100/MPG.city ~ Length, Cars93)
+plot(100/MPG.city ~ Weight, Cars93)
+```
+
+Above are some covaraites of interest due to both the linear relationship between the variables in the response and the intuitive relationship between these predictors and the response. For example, one may intuit that our response is directly correlated with the weight of the car or the highway fuel efficiency of the car. For these reasons, we will experiment with these variables as predictors. 
+
+We also musst consider collinearity in analysis. Although there appears to be a linear relationship between our response and `MPG.highway`, this relationship could also add collinearity and therefore instability into our model. Due to its predictive power we will include this predictor initially and test the collinearity later. In the above plots, all off the predictors have a linear relationship with our response variable, thus we are going to include them in our model. Despite these intuitively collinear data points, I will later use stepwise regression to understand which parameters are unnecessary and can be eliminated. After this, I will examine collinearity and eliminate any remaining predictorsr tat add unnecessary instability into the mode;. 
+
+Based on the above exploratory analysis examining relationships between variables in our dataset, I posit that `Cars93` is apt for a linear model. 
+
+# Section III: Methodology
+
+In the analysis section, I will use a Box-Cox analysis to determine if a transformation is necessary for the model. I will then fit the data to a simple linear model. After the box-cox analysis, I will transform the model with a sqrt transformation and compare the regression summaries and relevant plots (qq, residuals vs. fitted, etc.) to determine the better fit. Next, for both models, I will test assumptions -- like the normality assumption and the constant error assumption using residuals vs. fitted and the Shapiro Wilks, respectively. I will then contextualize standard errors and coefficient values of the two models using the regression summary, thereafter examining the median residual values as well as the R^2 values of the two models. Next, I will perform stepwise regression to eliminate unnecessary variables from the full models, and use hatvalues to check for large leverage points, `rstandard` to check for outliers, and Cook's distance to examine influential points. Removing these points from the models, I will then examine the performances of the two models. After this, I will use condition numbers and variance inflation factors to measure the stability and collinearity of the two models, then removing predictors indicating high levels of collinearity. Finally, I will apply robust regression techniques to this data -- particularly Least absolute deviations, the Huber method and Least Trimmed Squares.
+
+# Section IV: Analysis
+
+First, lets construct our linear model `g` and perform a Box-Cox analysis to see if a transformation is necessary. For this model, we will start with a full model with all predictors and later eliminate unnecessary parameters.
+
+```{r}
+g <- lm(100/MPG.city ~ Min.Price +  Price + Max.Price + MPG.highway + DriveTrain + Cylinders + EngineSize + Horsepower + RPM + Rev.per.mile + Man.trans.avail + Fuel.tank.capacity + Passengers + Length + Wheelbase + Width + Turn.circle + Rear.seat.room + Luggage.room + Weight, Cars93)
+
+boxcox(g, plotit = T)
+```
+
+Our 95% confidence interval graph of lambda includes 1.0, so this is a questionable candidate for a power-family transformation. The lambda value appears to be around 0.7, so we could assume that our lambda rounds to 0.5 or 1. Let's explore both possibilities Based on this value, `g(y) = log(Y)`. Let's fit our transformed model and compare it to the original:
+
+```{r}
+g1 <- lm(sqrt(100/MPG.city) ~ Min.Price +  Price + Max.Price + MPG.highway + DriveTrain + Cylinders + EngineSize + Horsepower + RPM + Rev.per.mile + Man.trans.avail + Fuel.tank.capacity + Passengers + Length + Wheelbase + Width + Turn.circle + Rear.seat.room + Luggage.room + Weight, Cars93)
+
+# I dropped Luggage.room beceause it would later be removed in stepwise regression and has a n/a value that is throwing an error during the stepwise regression
+
+plot(g)
+plot(g1)
+summary(g)
+summary(g1)
+```
+
+I When comparing the plots and regression summaries of the non-transformed model `g` and the transformed model `g1`, it is unclear whether the sqrt transformation adds much predictive value to the model. The variance of the residuals in `g1` appears to be slightly more constant and centered around zero; this observation is affirmed by the regression summary -- which shows that the median residual value for the transformed model is closer to zero than the first; however,the differences are almost negligible as both models resemble nearly constant variance. Next, the qq plot of the both `g` and `g1` appear to resemble a more normal distribution, and the leverage of the outliers in the model appear to be reduced. Let's check this assumption - that our data was sampled from a normal distribution (the null hypothesis) by using the Shapiro Wilks test on both our original model and our transformed model:
+
+```{r}
+shapiro.test(residuals(g))
+shapiro.test(residuals(g1))
+```
+
+Based on the above Shapiro-Wilks test, both `g` and `g1` have a p-value of greater than 0.05. Thus, for `g` and`g1`we fail to reject the null hypothesis. 
+
+In addition, in our regression summary, `g1` shows much better results than `g` in that it has a slightly adjusted R^2 value, and the p-values of most of the predictors is much lower, meaning it is a more significant predictor of distance than it was in the first model. These observations lead us to believe that `g1` is in fact a slightly better model for the `cars` dataset than `g`, and is accordingly favored in this analysis. However, because there likely exists collinearity within the dataset and because both models have similar performance, further exploration of both models after parameter elimination and examination of collinearity is necessary to understand which model truly has more predictive power. The assumptions in fitting the linear models to the dataset have been verified; so far, this dataset is apt for a linear model.
+
+Now that we have narrowed our analysis to `g1`, let's take a closer look at the coefficient estimates and the stardard error estimates:
+
+```{r}
+summary(g)
+summary(g1)
+```
+
+Above are the parameter estimates and standard errors in the 2nd and 3rd column of the regression summary. The models have intercept values of ~5 and ~2, respectively, meaning this is the baseline around which the coefficient values are constructed. Interpreting the coefficient estimates within the above regression summaries, we see that `MPG.highway` is negatively correlated with our response, meaning `MPG.highway` is correlated with `MPG.city`. Intuitively, this makes sense. In fact, we see that any negative coefficient value (parameter estimate) is negatively correlated with our response, meaning that it is positively correlated with `MPG.city`. All other positive parameter estimates are therefore negatively correlated with `MPG.city`. 
+
+Now that we have interpreted the variables in the regression summary, we use the `step` function to perform a stepwise regression to see if we should remove any unnecessary parameters. If a parameter is eliminated and AIC is lowered, then one may deem the parameter unnecessary:
+
+```{r}
+step(g)
+step(g1)
+```
+
+Because the step-wise regression removes the parameter with the lowest AIC until no single variable can be dropped, we see that the `step` function prompts us to use the following linear models: 
+
+```{r}
+g2 <- lm(100/MPG.city ~ Min.Price + MPG.highway + EngineSize + 
+    Man.trans.avail + Width, data = Cars93) #for non-transformed data
+
+g3 <- lm(sqrt(100/MPG.city) ~ Min.Price + MPG.highway + RPM + 
+    Rev.per.mile + Fuel.tank.capacity + Width, data = Cars93) #for transformed data
+```
+
+These are the two candidate models for our dataset.
+
+Now that we have reduced and eliminates the insignificant parameters of `g` and `g1` and created a two new corresponding models `g2` and `g3`, let's run some diagnostics on our new models and compare them to the previous models:
+
+```{r}
+plot(g2)
+plot(g3)
+summary(g2)
+summary(g3)
+```
+
+Based on the above diagnostics of our `g2` and `g3` models, the performance appears to be quite similar. The residuals vs. fitted plots for both models are almost identical, but the residuals of the transformed model `g3` appears to be a bit more constant and centered around zero. The qq plots both appear to be normally distributed, but `g3` appears to have a better fit. Let's just be sure of this assumption and perform a Shapiro Wilks test:
+
+```{r}
+shapiro.test(residuals(g2))
+shapiro.test(residuals(g3))
+```
+
+Basesd on this test, we see that both models were sampled from a normal distribution and we fail to reject the null hypothesis for both models as they show a p-value greater than 0.05. Thus, both models satisfy the constant variance assumption for the errors as well as the normality assumption; these models are legitimate linear models.
+
+Next, the regression summaries show us that `g3` has more constant residual variance as the median is much closer to zero. The significance of the predictors in both models are both quite high, though difficult to compare as they use different predictors. The adjusted R^2 values also appear to be higher for `g3`, thus indicating a better model fit. This could be due to collinearity, which we will examine in depth later in this analysis.
+
+Finally, the residuals vs. leverage plots appear to be more variant for the transformed model `g3`. This could indicate the presence of more influential outliers. Let's check for and analyze the leverage points, outliers, and influential points of both models:
+
+```{r}
+hatvalues(g2) > 2 * mean(hatvalues(g2)) #explicitly checking for high leverage points in G2
+
+hatvalues(g3) > 2 * mean(hatvalues(g3)) #explicitly checking for high leverage points G3
+```
+
+Based on the above diagnostic, we see the following large leverage points in `g2`: 8, 18, 39, 42, 48, and 59. 
+
+We also see the following large leverage points for `g3`: 18, 39, 42, 48, and 59. There exists lots of crossover between these points in the two models. 
+
+Next, let's check for outliers:
+
+```{r}
+rstandard(g2)[abs(rstandard(g2)) > 2] #explicitly checking for outliers in g2
+rstandard(g2)[abs(rstandard(g2)) > 1.75] #explicitly checking for outliers in g2, but with a slightly lower threshold
+
+rstandard(g3)[abs(rstandard(g3)) > 2] #explicitly checking for outliers in g3
+rstandard(g3)[abs(rstandard(g3)) > 1.7] #explicitly checking for outliers in g3 but with a slightly lower threshold
+
+```
+
+Above are the outliers in the `g2` and `g3` models, respectively. When the threshold for the outlier is slightly lowered, we see that some points that were not before considered outliers may be considered outliers. Because crossover between high leverage points and outliers only exists when the threshold is slightly lowered, we will check if these are in fact influential points that greatly affect the fit of our model:
+
+```{r}
+cooks.distance(g2) > 4/length(cooks.distance(g2))
+cooks.distance(g3) > 4/length(cooks.distance(g3))
+
+
+# for g3 there exist no crossover outlier and large leverage points under the chosen metrics
+```
+
+For `g2`, points 5, 10, 21, 39, 48, 52, 59, and 91 satisfy our Cooks distance requirement. Of these points, only 39 and 48 are considered both outliers and large leverage points. Thus, these are our influential points.
+
+For `g3`, points 10, 39, 42, 48, 58, 59, and 91 satisfy our Cooks distance requirement. Of these points, only points 48 might be considered an outlier and a large leverage point. Thus, for `g3`, this is our only influential point. Let's see how these two models behave when these influential points are excluded from the model.
+
+```{r}
+#for g2
+g20 <- lm(100/MPG.city ~ Min.Price + MPG.highway + EngineSize + 
+    Man.trans.avail + Width, data = Cars93) #for non-transformed data
+g20$residuals<- g20$residuals[-34] #weird indexing because nan values were dropped
+g20$residuals <- g20$residuals[-43]
+summary(g20)
+summary(g2)
+
+#for g3
+g30 <- lm(sqrt(100/MPG.city) ~ Min.Price + MPG.highway + RPM + 
+    Rev.per.mile + Fuel.tank.capacity + Width, data = Cars93) #for transformed data
+g30$residuals<- g30$residuals[-34] #weird indexing because nan values were dropped
+summary(g30)
+summary(g3)
+
+
+
+    ```
+
+We see that by excluding our influential points, the R^2 value increases in both models, though slightly. For `g2` the median residual value approaches zero by an order of magnitude, for `g3`, the residual values stay about the same. Also, in both models, most of the p-values became more significant -- this makes sense as our model is not disrupted by a point that doesn't well represent the model fit.
+
+Next, now the assumptions for fitting `cars` to a linear model have been examined and verified and we have analyzed the influential points in the model, we now need to examine collinearity and stability within the `g2` model using the condition numbers and variance inflation factors (VIFs):
+
+```{r}
+# conditional numbers for g2
+x <- model.matrix(g2) [, -1]
+e <- eigen(t(x) %*% x)
+sqrt(e$val[1]/e$val)
+
+# VIFs for g2
+vif(g2)
+```
+```{r}
+#conditional numbers for g3
+xg3 <- model.matrix(g3) [, -1]
+eg3 <- eigen(t(xg3) %*% xg3)
+sqrt(eg3$val[1]/eg3$val)
+
+# VIFs for g3
+vif(g3)
+```
+
+Starting with `g2`, we see that the conditional numbers exceed a value of 30, thus they are far too high. This indicates collinearity between more than just one linear combination. We can look to the VIF number, and because `EngineSize` and `Width` have VIFs over ~5, these predictors are contributing to model instability. Because engine size and width, intuitively, are correlated, this collinearity likely comes from this relationship:
+
+```{r}
+plot(EngineSize ~ Width, data = Cars93)
+```
+
+This linear relationship reaffirms our suspicion. let's see how the `g2` model performs without `EngineSize`:
+
+```{r}
+g2.1 <- lm(100/MPG.city ~ Min.Price + MPG.highway +
+    Man.trans.avail + Width, data = Cars93)
+summary(g2.1)
+
+# conditional numbers for g2.1
+x.1 <- model.matrix(g2.1) [, -1]
+e.1 <- eigen(t(x.1) %*% x.1)
+sqrt(e.1$val[1]/e.1$val)
+
+# VIFs for g2.1
+vif(g2.1)
+
+```
+
+By removing `Engine.Size`, we drastically reduce the collinearity of the model; this can be seen in the reduction of size of conditional numbers and VIFs. In addition, we don't sacrifice much predictive power as the adjusted R^2 has stayed relatively stable. 
+
+Now, for `g3`, we see that the conditional numbers exceed 30, even more than `g2`, thus the transformation (combined with stepwise regression) inflated the collinearity of the model. Despite the high condition numbers, the VIFs appear a bit lower as none of the value exceed 5. For the sake of exploration, let's remove `Fuel.take.capacity` and see how the model performs:
+
+```{r}
+g3.0 <- lm(sqrt(100/MPG.city) ~ Min.Price + MPG.highway + RPM + 
+    Rev.per.mile + Width, data = Cars93) 
+summary(g3.0)
+
+
+#conditional numbers for g3.0
+xg3.0 <- model.matrix(g3.0) [, -1]
+eg3.0 <- eigen(t(xg3.0) %*% xg3.0)
+sqrt(eg3.0$val[1]/eg3.0$val)
+
+# VIFs for g3.0
+vif(g3.0)
+```
+
+Removing this predictor also reduced the VIFs and conditional numbers of the model and preserved the model's predictive value. `g3.0` and `g2.1` offer heightened model stability while reducing the loss of predictive power. Thus, these two models are our leading candidates. 
+
+Lastly, let's try fitting our model using Least absolute deviation (LAD), the Huber method and Least Trimmed Squares (LTS) to see how it effects our results:
+
+For `g2.1`:
+
+```{r}
+# LAD
+summary(g2.1)
+require(foreign)
+require(quantreg)
+require(MASS)
+gLad2 <- rq(100/MPG.city ~ Min.Price + MPG.highway +
+    Man.trans.avail + Width, data = Cars93)
+summary(gLad2)
+
+#Huber
+require(MASS)
+gHub2 <- rlm(100/MPG.city ~ Min.Price + MPG.highway +
+    Man.trans.avail + Width, data = Cars93)
+summary(gHub2)
+
+# LTS
+set.seed(123)
+gLts2 <- ltsreg(100/MPG.city ~ Min.Price + MPG.highway +
+    Man.trans.avail + Width, data = Cars93)
+coef(gLts2)
+
+```
+
+Based on the above models, the LAD model does not qualitatively diverge from `g2.1`; the coefficient are quite similar. The confidence intervals of the predictors all reflect the p-value given in the regression summary, besides maybe the intercept -- which could have some instability. Overall, due to not much of a difference, I will defer to `g2.1` out of ease to work with.
+
+For the Huber model, almost all of the values -- coefficients and their standard errors -- produced by the model are identical to `g2.1`. In turn, the standard errors are nearly identical, though `g2.1` has a slightly lower RSE value. Thus, the least squares method prevails due to its slightly better performance and because it is much easier to analyze and manipulate. 
+
+Finally, for Least Trimmed Squares, this fit is quite different than the original `g2.1` model. The intercept is negative, and `Man.trans.avail` and `Width` have much larger coefficients than in the original model.
+
+For `g3.0`:
+
+```{r}
+# LAD
+summary(g3.0)
+require(quantreg)
+gLad3 <- rq(sqrt(100/MPG.city) ~ Min.Price + MPG.highway + RPM + 
+    Rev.per.mile + Width, data = Cars93) 
+summary(gLad3)
+
+#Huber
+require(MASS)
+gHub3 <- rlm(sqrt(100/MPG.city) ~ Min.Price + MPG.highway + RPM + 
+    Rev.per.mile + Width, data = Cars93) 
+summary(gHub3)
+
+# LTS
+set.seed(123)
+gLts3 <- ltsreg(sqrt(100/MPG.city) ~ Min.Price + MPG.highway + RPM + 
+    Rev.per.mile + Width, data = Cars93) 
+coef(gLts3)
+```
+
+Based on the above models, the LAD model does not qualitatively diverge from `g3.0`; the coefficient are quite similar.`MPG.highway`'s significance in the LAD model is quite lower than in `g3.0`, so this significance could indicate collinearity / instability. Other than this predictor, the confidence intervals of the predictors all reflect the p-value given in the regression summary. Overall, due to not much of a difference, I will defer to `g3.0` out of ease to work with.
+
+For the Huber model, almost all of the values -- coefficients and their standard errors -- produced by the model are identical to `g2.1`. However, `RPM` and `Rev.per.mile` have coefficient values of 0. This could be due to collinearity or outlliers in the model, as Huber is much less sensitive to ourliers and influential points. With two out of five predictors being deemed insignificant and the lack of quality outliers found in our earlier analysis, I opt to use `g3.0`. This is affirmed by the lower standard error in the original linear model.
+
+Finally, for Least Trimmed Squares, this fit is a bit different than the original `g3.0` model. All coefficients are the same order of magnitude as the original model; thus because there are few quailtative differences between the models, I opt to use the original transformed model `g3.0`. 
+
+# Conclusion
+
+Ultimately, after performing numerous diagnostics of the original model `g`, this analysis have found that `g3.0`, the transformed model that removed collinear variables based on VIFs, is the preferred model. Though `g2.1` is also a promising model, the fit of `g3.0` is slightly better -- indicated by the higher R^2 value, lower RSE value, and more constant residuals. This prioritization of performance might come at a cost, however: the conditional numbers of `g3.0` were significantly higher than `g2.1`, indicating model instability. This suspicion was furthered after the Huber robust regression model weighted two of the five predictor coefficients as zero. Between almost all models, `Min.price` and `MPG.highway` emerged as the most significant predictors of the defined response. Intuitively, and because diagnostics showed a linear relationship between `MPG.highway` and `MPG.city`, this could be a source of model instability. Future iterations of this analysis could more deeply analyze the latent relationships between predictors to understand collinearity within the two models, and ultimately gain a better understanding of whether the trade off in performance merits preference over model instability. 
+
+
+
+
+

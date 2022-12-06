@@ -1,0 +1,141 @@
+---
+title: "HW3"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+# 1
+
+### 1A
+
+```{r}
+library(faraway)
+data(prostate)
+lm1 <- lm(lpsa ~ lcavol + lweight + age + lbph + svi + lcp + gleason + pgg45, prostate)
+summary(lm1)
+```
+
+Let's compute the confidence intervals associated with age at 90 and 95%:
+
+```{r}
+confint(lm1, c("age"), .95)
+confint(lm1, c("age"), .90)
+```
+
+Because we see in our regression summary that age has a P-value of ~.08, when held to 95% confidence interval - or holding it to the standard of .05, we see that we cannot say age is a significant predictor because the P-value is too high. However, because the confidence interval is just below zero at 90% confidence, age is a significant predictor at that level. Therefore, we can reject the null hypothesis at a 95% confidence interval.
+
+### 1B
+
+```{r}
+require(ellipse)
+plot(ellipse(lm1, c('age', 'lbph')), type = "l")
+points(0, 0, pch = 1)
+abline(v= confint(lm1)['age',], lty = 2)
+abline(h= confint(lm1)['lbph',], lty = 2)
+```
+According to the joint-null hypothesis cannot be rejected because `age = lbph = 0` lies within the confidence region. Individually, the null hypotheses`age = 0` and `lbph = 0` cannot be rejected because 0 lies within the confidence intervals.
+
+### 1C
+
+```{r}
+nreps = 4000
+set.seed(47)
+tstats = numeric(nreps)
+for (i in 1:nreps) {
+  pros_mod2 = lm(lpsa ~ lcavol + lweight + sample(age) + lbph + svi + gleason + pgg45, prostate)
+  tstats[i] = summary(pros_mod2)$coef[4,3]
+}
+
+hist(tstats)
+summary(lm1)$coef[4,3]
+``` 
+
+We see that we cannot reject the null-hypothesis because the t-statistic is low - a high t-statistic in this model would be ~5. 
+
+### 1D
+
+```{r}
+lm2 <- update(lm1, . ~ lcavol +lweight + svi)
+summary(lm2)
+```
+
+```{r}
+anova(lm2, lm1)
+```
+
+The ANOVA table indicates that there is not a significant improvement in fit in model 2 relative to model 1. This fact is bolstered by the residual sum of squares value being higher for model 2 than model 1. Since the P value is too high, we fail to reject the null hypothesis
+
+# 2
+
+### 2A
+
+```{r}
+library(faraway)
+data("cheddar")
+lm3 <- lm(taste ~ Acetic + H2S + Lactic, cheddar)
+summary(lm3)
+```
+
+According to the regression summary's significance codes, Lactic and H2S are significant predictors at the 5% level.
+
+### 2B
+
+To reverse Acetic and H2S, which are on a log scale, we can use the natural log and e^x to negate this scaling:
+
+```{r}
+ lm4 <- lm(taste ~ I(exp(1)^Acetic) + I(exp(1)^H2S) + Lactic, cheddar)
+summary(lm4)
+```
+
+As we see in the regression summary, only Lactic is a significant predictor at 5%. However, H2S is a significant predictor at 10%.
+
+### 2C
+
+We cannot use the F-test to compare these two models because `lm3` is a linear model and `lm4` is non-linear. They are also not nested, so according to page 41, we cannot use the F-test in this case. The first model, `lm3` presents a better fit of the data according to the R^2 criteria - it's value is higher. This makes sense as F-tests measure variance and the regular scale has a higher variance.
+
+### 2D
+
+We saw in the regression summary for (2A) that the beta coefficient for H2S was ~ 3.91. Thus, if we hold all other predictors constant and increase H2S by 0.01, we would therefore increase taste by 0.0391. 
+
+### 2E
+
+Our percent change can be represented as exp(x + .01) on the originial scale. Therefore, the percent change is (exp(x + 0.01) - exp(x)) / exp(x) = exp(0.01) - 1. Thus:
+
+``` {r}
+exp(1)^(0.01) -1 
+```
+
+Thus, the percent of change we observe is ~1.005%
+
+# 3
+
+###3A
+
+```{r}
+library(faraway)
+data("teengamb")
+lm5 <- lm(gamble ~ income + verbal + status + sex, teengamb)
+summary(lm5)
+```
+
+According to the above regression summary, both income and sex are statistically significant at a 5% significance level. 
+
+### 3B
+
+The predictor `sex` is split into male (0) and female (1). These values are multiplied by the coefficient for sex (~-22.1). Thus, when all other variables are held constant, females generally spend $22.11 less than men on gambling. 
+
+### 3C
+
+```{r}
+lm6 <- lm(gamble ~ income, teengamb)
+summary(lm6)
+```
+
+```{r}
+anova(lm6, lm5)
+```
+
+Because the P value is so low and a significant predictor at a 5% confidence interval, we reject the null hypothesis: that the smaller model (lm5) should be used and is a significant predictor of gamling level.s

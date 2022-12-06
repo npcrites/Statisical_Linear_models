@@ -1,0 +1,210 @@
+---
+title: "HW4"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+#1A
+
+```{r}
+library(faraway)
+data("prostate")
+head(prostate)
+lm1 <- lm(lpsa ~ lcavol + lweight + age + lbph + svi + lcp + gleason + pgg45, prostate)
+df1 <- data.frame(lcavol = 1.44692, lweight = 3.62301, age = 65.00000, lbph=0.30010, svi = 0.00000, lcp = -0.79851, gleason = 7.00000, pgg45 = 15.00000)
+predict(lm1, df1, interval = "confidence")
+```
+
+We see that the 95% prediction interval for `lpsa` is (0.9646584, 3.813447). LPSA is predicted to have a value of 2.389053.
+
+# 1B 
+
+```{r}
+df2 <- data.frame(lcavol = 1.45000, lweight = 3.59801, age = 20.00000, lbph=0.30010, svi = 0.00000, lcp = -0.79851, gleason = 7.00000, pgg45 = 15.00000)
+predict(lm1, df2, interval = "prediction")
+```
+
+With an age of twenty, this data point is quite far from the mean. Therefore, the prediction interval accuracy is decreased and widened. 
+
+# 1C
+
+```{r}
+summary(lm1)
+```
+
+We can see that lcavol, lweight, and svi are the only significant predictors at the 5% level.
+
+```{r}
+lm0 <- lm(lpsa ~ lcavol + lweight + svi, data = prostate)
+df3 <- data.frame(lcavol = 1.45, lweight = 3.59801, svi = 0.0)
+predict(lm0, df3, interval = "prediction")
+```
+
+The first iteration of the original model has about as wide of a prediction interval as the reduced model. However, the reduced model removes confounding and insignificant variables.
+
+# 2A
+
+```{r}
+data("teengamb")
+lm2 <- lm(gamble ~ sex + status + income + verbal, teengamb)
+summary(lm2)
+```
+
+```{r}
+x2 <- model.matrix(lm2)
+x20 <- apply(x2,2,mean)
+x20['sex'] <- 0 #because we only care about male gamblers
+predict(lm2,new=data.frame(t(x20)),interval="confidence",level = .95)
+```
+
+According to this model, the prediction for a male with average predictors is ~28.24. The 95% confidence intervals are lwr: 18.78 and uppr: 37.7.
+
+# 2B
+
+```{r}
+x3 <- model.matrix(lm2)
+x30 <- apply(x3,2,function(x) quantile(x, 0.95))
+x30['sex'] <- 0
+X3Pred <- predict(lm2, new=data.frame(t(x30)), interval = "confidence")
+X3Pred
+```
+
+We see that the confidence interval for the maximal male gambling values has a much wider CI than the mean. This makes sense because the top 5% of gamblers have much more sparsity than average male gamblers;  in other words there is much more variance in the outliers in the top 5% of male gamblers. 
+
+#2C
+
+```{r}
+lm3 <- lm(sqrt(gamble) ~ .,data=teengamb)
+x <- model.matrix(lm3)
+x0 <- apply(x,2,mean)
+x0['sex'] <-0
+predLm3<- predict(lm3,new=data.frame(t(x0)),interval="confidence",level = .95)
+predLm3
+#original units
+predLm3.orig<-c(predLm3[1]^2,predLm3[2]^2,predLm3[3]^2)
+predLm3.orig
+```
+
+Above are the 95% prediction intervals for the individual in A in sqrt(gamble) in adjusted and original units, respectively.
+
+# 2D
+
+```{r}
+x0['sex'] <-1
+x0['status'] <-20
+x0['income'] <-1
+x0['verbal'] <-10
+
+pred <- predict(lm3,new=data.frame(t(x0)),interval="confidence",level = .95)
+pred
+```
+
+```{r}
+pred.orig <- c(-pred[1]^2,pred[2]^2,pred[3]^2)
+pred.orig
+```
+
+Because negative values for the response `gamble` are not feasible, this model doesn't make much sense to use.
+
+# 3A 
+
+```{r}
+data("snail")
+xtabs(water ~ temp + humid, snail)/4
+```
+
+No, we cannot predict under these conditions. This only represents the average snail at specific humidity and temp.
+
+# 3B 
+
+```{r}
+lm4 <- lm(water ~ ., data = snail)
+newDf <- data.frame(temp = 25, humid = 60)
+predict(lm4, newDf)
+```
+
+# 3C
+
+```{r}
+newerDf <- data.frame(temp = 30, humid = 75)
+predict(lm4, newerDf)
+```
+
+Water content of snails increases with humidity and with temp. Both of these predictors are within the scope / range of `lm4` data, so they are both valid predictors
+
+# 3D
+
+```{r}
+interceptDf <- data.frame(humid = 0, temp = 0)
+predict(lm4, interceptDf)
+```
+
+```{r}
+interceptDf2 <- data.frame(humid = 100, temp = 258.27)
+predict(lm4, interceptDf2)
+```
+
+These predictors are not unique. One could use algebra to set humidity or temperature to 100% and the other variable would have to increase correspondingly. In short, this is just a certain combination of beta values, but it is not the only combination of beta variables. The temperature and humidity are way too high, so this is also an unrealistic model.
+
+# 3E
+
+```{r}
+lastDf <- data.frame(temp =25, humid = 67.53)
+predict(lm4, lastDf)
+```
+
+We see that when temp is about 25 degrees Celsius and  humidity is about 67.53, we get a predicted response of about 80% water content.
+
+# 5A
+
+```{r}
+data("fat")
+head(fat)
+```
+```{r}
+lm5 <- lm(brozek ~ age + weight + height + abdom, fat)
+lmodel <- lm(brozek ~ age + weight + height + neck + chest + abdom + hip +  thigh + ankle + biceps +  forearm + wrist, data = fat)
+summary(lm5)
+summary(lmodel)
+anova(lm5,lmodel)
+```
+
+The two models have almost identical  R^2 values, thus it appears that many of the predictors used in the larger model are confounding and unnecessary. However, we have a very low P-value and a relatively low F-test value for our larger model, with a P-value significant at .01 percent. Therefore, we reject the null hypothesis. 
+
+# 5B
+
+```{r}
+# full model
+x = model.matrix(lmodel)
+x0 = apply(x,2,median)
+predict(lmodel, new=data.frame(t(x0)), interval="prediction")
+```
+
+```{r}
+# null hypothesis
+x = model.matrix(lm5)
+x0 = apply(x,2,median)
+predict(lm5, new=data.frame(t(x0)), interval="prediction")
+```
+
+No, the models have nearly identical values, the full model shows greater accuracy in it's predictions as the null hypothesis generalizes on edge cases - as seen in the lwr and upr prediction values. However, for the majority of the data, the models are nearly identical and the differences are negligible. 
+
+# 5C
+
+```{r}
+x
+```
+
+Cases 39 and 42 appear to be anomalous.
+
+# 5D
+
+```{r}
+update(lm5, data = fat[c(-39, -42), ])
+predict(lm5, new=data.frame(t(x0)), interval="prediction")
+```
+
+Thus, exclusion of outliers didn't much change the prediction.

@@ -1,0 +1,164 @@
+---
+title: "Lab Ch. 9 + 10"
+author: "Nick Crites"
+date: '`r Sys.Date()`'
+output:
+  word_document: default
+  html_document: default
+---
+
+9.3, 9.4, 9.5, 10.1, 10.3
+
+# 9.3
+
+```{r}
+library(MASS)
+library(faraway)
+data('ozone')
+head(ozone)
+lmodO <- lm(O3 ~ temp+humidity+ibh, data = ozone)
+library(MASS)
+boxcox(lmodO) # box cox with all predictors to check is transformation is appropriate
+boxcox(lmodO)
+```
+
+Based on the above above 95% confidence interval, we see that 0.25 is inclulded. Thus, we can set our response to the 0.25 power to transform our resposne:
+
+```{r}
+lmodO1 <- lm((O3)^.25 ~ temp+humidity+ibh, data = ozone)
+summary(lmodO1)
+```
+
+# 9.4
+
+```{r}
+data('pressure')
+lmodP <- lm(pressure ~ temperature, pressure)
+boxcox(lmodP)
+summary(lmodP)
+```
+
+Based on the above box-cox, see that a lambda value of 0.1 is included in the 95% confidence interval. Thus, we can raise the response to the 0.1 power:
+
+
+```{r}
+lmodP1 <- lm((pressure)^0.1 ~ temperature, pressure)
+summary(lmodP1)
+```
+
+Our fit improved significantly.
+
+# 9.5 
+
+```{r}
+library(faraway)
+data('trees')
+head(trees)
+lmodT <- lm(Volume ~ Girth * Height, trees)
+summary(lmodT)
+boxcox(lmodT)
+```
+
+Based on the above Box Cox analysis, we can use a lambda value of 0.25 to transorm our original model:
+
+```{r}
+lmodT1 <- lm((Volume)^0.1 ~ Girth + Height, trees)
+summary(lmodT1)
+```
+
+Our model was improved by the transformation.
+
+# 10.1 
+
+```{r}
+data('prostate')
+lmod_P <- lm(lpsa ~ ., prostate)
+lmod_P1 <- lm(lpsa ~ . - lcp - age - gleason - pgg45 - lbph , prostate)
+summary(lmod_P1)
+```
+
+Using backward elimination, we arrive at the above model.
+
+Now we can use use AIC to determine our model selection:
+
+```{r}
+step(lmod_P)
+```
+
+Because step function uses AIC to eliminate insignificant predictors, we can use the function to arrive at the above model using AIC as our criteria for elimination or inclusion:
+
+```{r}
+lmod_P2 <- lm(formula = lpsa ~ lcavol + lweight + age + lbph + svi, data = prostate)
+summary(lmod_P2)
+```
+
+Using adjusted R^2 as our criteria for predictor elimination:
+
+```{r}
+require(leaps)
+b<-regsubsets(lpsa~.,data=prostate)
+summary(b)
+```
+
+This doesn't tell us much, so we need to incude a graph plotting adjusted R^2 and number of parameters. While we are at it we can also plot the number of parameters against the Cp statistic:
+
+```{r}
+rs<-summary(b)
+par(mfrow=c(1,2))
+plot (2:9, rs$adjr2, xlab="No. of Parameters",ylab="Adjusted R-squqre")
+plot(2:9, rs$cp, xlab="No. of Parameters",ylab="Cp Statistic")
+abline (0, 1)
+```
+
+For adjusted R^2, 8 parameters gives us the highest R^2 value; we should remove gleason due to its low significance.
+
+For Mallows Cp, ~6 parameters produces the best Cp statistic. Thus, we ought to include lcavol + lweight + age + lbph + svi + (intercept)
+
+# 10.3
+
+```{r}
+data('divusa')
+lmDiv <- lm(divorce ~ ., divusa)
+summary(lmDiv)
+```
+
+Using backward elimination and removing the insignificant predictors based on the highest insignificant p-value:
+
+```{r}
+lmDiv1 <- lm(divorce ~.  - unemployed, divusa)
+summary(lmDiv1)
+```
+
+Based on the backward elimination method, we arrive at `lmDiv1` or `lm(formula = divorce ~ . - unemployed, data = divusa)`. 
+
+Now let's use AIG to eliminate insignficant predictors from our original model:
+
+```{r}
+step(lmDiv)
+```
+
+Based on the above step function, which uses AIG as a way of eliminating insignificant predictors, we see that we arrive at the following reduced linear model:
+
+```{r}
+lmDiv2 <- lm(divorce ~ year + femlab + marriage + birth + military, 
+    data = divusa)
+```
+
+Now let's use adjusted R^2 and Mallows Cp to determine which predictors ought to be eliminated from our full model:
+
+```{r}
+b1 <- regsubsets(divorce ~ ., data = divusa)
+summary(b1)
+```
+
+Now let's look at the graphs of number of predictors against R^2 and Malows Cp, respectively:
+
+```{r}
+rs<-summary(b1)
+par(mfrow=c(1,2))
+plot(2:7, rs$cp, xlab="No. of Parameters",ylab="Cp Statistic")
+abline (0, 1)
+plot (2:7, rs$adjr2, xlab="No. of Parameters",ylab="Adjusted R-squqre")
+```
+
+According to the above plot, we see that CP statistic is minimized when we have 6 parameters and eliminate one. Thus, we ought to remove `unemployed` from our model.  Adjusted R^2 affirms this value as we see the adjusted R^2 value peaks at 6 predictors. We should really remove `unemployed` from the full model. 

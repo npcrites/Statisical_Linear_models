@@ -1,0 +1,147 @@
+---
+title: "HW7"
+author: "Nick Crites"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+# 1
+```{r}
+library(faraway)
+data('pipeline')
+```
+
+## 1A
+
+```{r}
+lm1 <- lm(Lab ~ Field, data = pipeline)
+summary(lm1)
+plot(lm1)
+```
+
+Based on the above qq plot and the fitted vs. residuals plot, our variance looks non-constant.
+
+## 1B
+
+```{r}
+i <- order(pipeline $ Field)
+npipe <- pipeline[i,] 
+ff <- gl(12,9)[-108]
+meanfield <- unlist(lapply(split(npipe $ Field,ff),mean))
+varlab <- unlist(lapply(split(npipe $ Lab,ff),var))
+```
+
+```{r}
+lm1.0 <- lm(log(varlab) ~ log(meanfield), data = pipeline, weights = 1/meanfield)
+coef(lm1.0)
+summary(lm1.0)
+```
+
+Compared to our oringinal model, this is significantly worse -- it has a lower R^2 value and less significant predictors. However, the span of the residuals decreased significantly.
+
+# 1C
+
+Let's try a square-root transformation:
+
+```{r}
+newlm1DF <- data.frame(sqLab = sqrt(pipeline$Lab), sqField = sqrt(pipeline$Field))
+newlm1 <- lm(sqLab ~ sqField, data = newlm1DF)
+summary(newlm1)
+plot(newlm1)
+```
+
+This is a much better fit than our original unweighted model as it has nearly constant variance.
+
+# 2
+
+```{r}
+data('divusa')
+lm2 <- lm(divorce ~ unemployed + femlab + marriage + birth + military, divusa)
+summary(lm2)
+```
+
+## 2A
+
+```{r}
+#cor(residuals(lm2)[-1], residuals(lm2)[-length(residuals(lm2))])
+plot(residuals(lm2) ~ year, na.omit(divusa), ylab="Residuals")
+abline(h=0)
+
+cor(residuals(lm2)[-1],residuals(lm2)[-length(residuals(lm2))])
+```
+As we see in the above graph, there appears to be a positive correlation (linear) between successive residuals.
+
+## 2B
+
+```{r}
+require(nlme)
+
+GL_mod <- gls(divorce ~ unemployed + femlab + marriage + birth + military, divusa, correlation = corAR1(form =~ year), method = "ML")
+summary(GL_mod)
+```
+
+
+```{r}
+intervals(GL_mod, which="var-cov")
+```
+
+The estimated correlaltion is .97 -- an extreemly high value; the confidence interval also does not contain zero, so AR(1) is significant. 
+
+# 3
+
+```{r}
+data(salmonella, package = 'faraway')
+salmonella
+plot(colonies ~ dose, data=salmonella)
+plot(colonies ~ log(dose), data = salmonella)
+```
+
+As we see above, the log fit normalizes our distribution as is preferred.
+
+```{r}
+glm0 <- glm(formula = colonies ~ dose, family = poisson, salmonella)
+summary(glm0)
+```
+
+Very low p-value for our predictor.
+
+```{r}
+glm1 <- glm(formula = colonies ~ log(dose+1), family = poisson, salmonella)
+summary(glm1)
+plot(glm1)
+```
+
+We see that the p-value for our predictor is quite a bit lower compared to our original model. However, our residuals are not centered around y=0; our R^2 value is also quite weak. Thus, thuss, we see we have non-constant variants and our fit is quite weak dispite the glm.
+
+# 4
+
+```{r}
+data(cars, package = 'faraway')
+summary(cars)
+plot(cars$speed, cars$dist, xlab='Speed (mph)', ylab='Stopping Distance (ft)')
+```
+
+```{r}
+lmCars <- lm(cars$dist ~ cars$speed)
+plot(cars$speed, cars$dist, xlab='Speed (mph)', ylab='Stopping Distance (ft)')
+abline(lmCars)
+plot(lmCars)
+summary(lmCars)
+```
+
+Based on the above model, we can assume that a linear model would be apt for this data. Our one predictor is quite significant, although the R^2 value is not very high. We could try scaling our response quadratically to see if it improves:
+
+```{r}
+speed <- cars$speed
+speed2 <- speed^2
+dist <- cars$dist
+  
+lmCars1 <- lm(dist ~ speed + speed2)
+summary(lmCars1)
+plot(lmCars1)
+summary(lmCars1)
+```
+
+As we see from the above quadratic model, our R^2 is pretty much the same and our new predictors are insignificant. Therefore, we should use our original simple linear model.
+
