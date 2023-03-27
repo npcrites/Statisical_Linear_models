@@ -7,3 +7,5 @@ Topics include:
 - Coefficent Estimations
 - Non-linear regression
 - Basic time-series analysis
+- Leverage / Normality assumption tests
+- 
