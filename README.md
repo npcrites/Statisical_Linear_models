@@ -1,4 +1,4 @@
-# Statisical_Linear_models
+# Statisical Linear Modeling (MATH117)
 R Homework and lab assignments from Statistical Linear Modelling class
 
 Topics include:
