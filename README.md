@@ -1,5 +1,5 @@
 # Statisical Linear Modeling (MATH117)
-R Homework and lab assignments from Statistical Linear Modelling class
+R Homework and lab assignments from Statistical Linear Modeling class
 
 Topics include:
 - Multiple Regression
