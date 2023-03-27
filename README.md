@@ -8,4 +8,4 @@ Topics include:
 - Non-linear regression
 - Basic time-series analysis
 - Leverage / Normality assumption tests
-- 
+- Prediction / Confidence Intervals
